@@ -17,9 +17,11 @@ export class AuthController {
   ) {
     try {
       const data: any = await this.authService.registration(registerDTO);
-
+      console.log('here');
       return response.status(SUCCESS).json(success(data));
     } catch (error) {
+      console.log('hereeeeee');
+
       return response.status(REQUEST_ERROR).json(requestInvalid(error));
     }
   }
