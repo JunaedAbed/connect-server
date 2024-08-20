@@ -6,43 +6,43 @@ export type UserDocument = HydratedDocument<User>;
 @Schema({ collection: 'tblUser' })
 export class User {
   @Prop({ type: Number, index: true, unique: true, required: true })
-  UserID: number; // Equivalent to SERIAL, Primary key in MongoDB
+  intUserID: number; // Equivalent to SERIAL, Primary key in MongoDB
 
   @Prop({ type: String })
-  unitId: string; // BIGINT (Stored as a string to accommodate large numbers in MongoDB)
+  strUnitId: string; // BIGINT (Stored as a string to accommodate large numbers in MongoDB)
 
   @Prop({ type: String, maxlength: 255 })
-  email: string; // VARCHAR(255)
+  strEmail: string; // VARCHAR(255)
 
   @Prop({ type: String })
-  userImage: string; // TEXT (to store image, voice, PDF, or other link as string)
+  strUserImage: string; // TEXT (to store image, voice, PDF, or other link as string)
 
   @Prop({ type: String })
-  Password: string; // TEXT
+  strPassword: string; // TEXT
 
   @Prop({ type: String })
-  credential: string; // TEXT
+  strCredential: string; // TEXT
 
   @Prop({ type: String })
-  device_token: string; // TEXT
+  strDeviceToken: string; // TEXT
 
   @Prop({ type: String, maxlength: 50 })
-  enroll: string; // VARCHAR(50)
+  strEnroll: string; // VARCHAR(50)
 
   @Prop({ type: String, maxlength: 20 })
-  mobile_number: string; // VARCHAR(20)
+  strMobileNumber: string; // VARCHAR(20)
 
   @Prop({ type: String })
-  profile_picture: string; // TEXT
+  strProfilePicture: string; // TEXT
 
   @Prop({ type: String, maxlength: 50 })
-  role: string; // VARCHAR(50)
+  strRole: string; // VARCHAR(50)
 
   @Prop({ type: String, maxlength: 50 })
-  session: string; // VARCHAR(50)
+  strSession: string; // VARCHAR(50)
 
   @Prop({ type: String, maxlength: 255 })
-  user_name: string; // VARCHAR(255)
+  strUsername: string; // VARCHAR(255)
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

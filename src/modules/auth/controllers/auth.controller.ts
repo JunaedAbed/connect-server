@@ -2,8 +2,8 @@ import { Body, Controller, Post, Req, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { requestInvalid, success } from 'src/helpers/http';
 import { REQUEST_ERROR, SUCCESS } from 'src/shared/constants/httpCodes';
-import { AuthService } from './auth.service';
-import { RegisterDTO } from './dto/register.dto';
+import { AuthService } from '../services/auth.service';
+import { UserRegistrationDTO } from '../dto/user-reg.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -13,7 +13,7 @@ export class AuthController {
   async register(
     @Req() request: Request,
     @Res() response: Response,
-    @Body() registerDTO: RegisterDTO,
+    @Body() registerDTO: UserRegistrationDTO,
   ) {
     try {
       const data: any = await this.authService.registration(registerDTO);

@@ -1,104 +1,94 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { RegisterDTO } from './dto/register.dto';
-import { LoginInfo } from './entities/auth.entity';
+import { UserRegistrationDTO } from '../dto/user-reg.dto';
+import { LoginInfo } from '../entities/auth.entity';
+import { UserService } from 'src/modules/user/services/user.service';
+import { hashPassword } from 'src/utils/bcrypt';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectModel(LoginInfo.name)
     private loginInfoRepository: Model<LoginInfo>,
+    private userService: UserService,
     private readonly jwtService: JwtService,
   ) {}
 
-  async registration(registerDTO: RegisterDTO) {
+  async registration(registerDTO: UserRegistrationDTO) {
+    if (
+      !registerDTO.strEmail ||
+      !registerDTO.strPassword ||
+      !registerDTO.strMobileNumber
+    ) {
+      throw new UnauthorizedException('Invalid credentials!');
+    }
     try {
-      var date = new Date();
+      const loginInfo = await this.loginInfoRepository.findOne({
+        where: { strPhone: registerDTO.strMobileNumber },
+      });
+      if (!loginInfo) throw new BadRequestException('OTP is not recognized');
 
-      const isUserExist = await this.primaryInfoService.findOneUser(
+      const isUserEmailExist = await this.userService.findByEmail(
         registerDTO.strEmail,
       );
-      if (isUserExist) {
-        throw new UnauthorizedException(
-          'user with this email already exist! Login or Please try with another email.',
-        );
+      if (isUserEmailExist) {
+        throw new UnauthorizedException('user already exist with this email!');
       }
-
-      const org = await this.orgSeßrvice.createOrganization({
-        strCreatedBy: registerDTO.strEmail,
-        ...registerDTO.RegOrg,
-      });
-
-      const primaryInfoDTO = new PrimaryInformationDTO();
-      primaryInfoDTO.strEmail = registerDTO.strEmail;
-      primaryInfoDTO.strPassword = registerDTO.strPassword;
-      primaryInfoDTO.strEmployeeName = registerDTO.strEmployeeName;
-
-      primaryInfoDTO.intOrgId = org.intId;
-      primaryInfoDTO.intEnroll = 1;
-      primaryInfoDTO.intRoleId = 1; // roleID = 1 for Admin
-      primaryInfoDTO.intSupervisorId = 0;
-
-      const user =
-        await this.primaryInfoService.createNewEmployee(primaryInfoDTO);
-      if (!user) {
-        throw new InternalServerErrorException(
-          'Failed to create user in primary info',
-        );
-      }
-      console.log(user);
-      await this.primaryInfoService.updateOrgIdInPrimaryInfo(
-        user.intId,
-        org.intId,
+      const isUserPhoneExist = await this.userService.findByPhone(
+        registerDTO.strMobileNumber,
       );
-      await this.subscriptionService.createSubscription({
-        intOrgId: org.intId,
-        dteStartDate: new Date(),
-        dteEndDate: new Date(date.setDate(date.getDate() + 30)),
-        intSubscriptionPlanId: 1,
-        isActive: true,
+      if (isUserPhoneExist) {
+        throw new UnauthorizedException(
+          'user already exist with this phone number!',
+        );
+      }
+      const hashedPassword = await hashPassword(registerDTO.strPassword);
+      const user = await this.userService.createUser({
+        strEmail: registerDTO.strEmail,
+        strPassword: hashedPassword,
+        strPhone: registerDTO.strMobileNumber,
+        intRoleId: registerDTO.strRole,
+        isAllBranch: registerDTO.isAllBranch,
+        isOrderFullAccess: registerDTO.isOrderFullAccess,
       });
+      if (!user) {
+        throw new InternalServerErrorException('Could not create user');
+      }
 
-      // find RoleName to generate refresh_token
       const role = await this.roleService.findById(user.intRoleId);
       const payload = {
         email: user.strEmail,
-        orgId: user.intOrgId,
-        intEmployeeId: user.intId,
+        intId: user.intId,
         password: user.strPassword,
         role: role.strRoleName,
       };
 
       const expiresIn = '30d';
-      let refresh_token: any;
-      try {
-        refresh_token = await this.jwtService.signAsync(payload, { expiresIn });
-      } catch (error) {
-        console.error('Error signing JWT:', error);
-        return { message: 'Error signing JWT: ', error };
+      const strRefresh_token = await this.jwtService.signAsync(payload, {
+        expiresIn,
+      });
+
+      const newUser = await this.loginInfoRepository.update(loginInfo.intId, {
+        intUserId: user.intId,
+        strEmail: user.strEmail,
+        strPassword: user.strPassword,
+        dteLastLogin: new Date(),
+        strRefresh_token: strRefresh_token,
+      });
+      if (!newUser) {
+        throw new InternalServerErrorException('Could not create user');
       }
 
-      await this.loginInfoRepository.update(
-        { strEmail: user.strEmail },
-        {
-          intEmployeeId: user.intId,
-          strPassword: user.strPassword,
-          dteLastLogin: new Date(),
-          intEnroll: user.intEnroll,
-          refresh_token: refresh_token,
-        },
-      );
-
-      return { message: 'account created!' };
+      return user;
     } catch (error) {
-      console.log(error);
-      return {
-        Status: 500,
-        message: error.message,
-        error: 'Internal Server Error',
-      };
+      throw error;
     }
   }
 }
