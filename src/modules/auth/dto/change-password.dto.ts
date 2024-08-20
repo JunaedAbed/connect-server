@@ -1,11 +1,11 @@
 import { IsString, Length } from 'class-validator';
 
-export class AuthDTO {
+export class ChangePasswordDTO {
   @IsString()
   @Length(1, 255)
-  strEmailOrPhone: string;
+  strOldPassword: string;
 
   @IsString()
   @Length(1, 255)
-  strPassword: string;
+  strNewPassword: string;
 }
