@@ -20,19 +20,6 @@ export class UserUpdateDTO {
 
   @IsOptional()
   @IsString()
-  credential?: string; // Optional update for credential.
-
-  @IsOptional()
-  @IsString()
-  device_token?: string; // Optional update for device_token.
-
-  @IsOptional()
-  @IsString()
-  @Length(1, 50)
-  enroll?: string; // Optional update for enroll.
-
-  @IsOptional()
-  @IsString()
   @Length(1, 20)
   mobile_number?: string; // Optional update for mobile_number.
 
@@ -44,14 +31,4 @@ export class UserUpdateDTO {
   @IsString()
   @Length(1, 50)
   role?: string; // Optional update for role.
-
-  @IsOptional()
-  @IsString()
-  @Length(1, 50)
-  session?: string; // Optional update for session.
-
-  @IsOptional()
-  @IsString()
-  @Length(1, 255)
-  user_name?: string; // Optional update for user_name.
 }
