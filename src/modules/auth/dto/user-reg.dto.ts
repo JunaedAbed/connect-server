@@ -1,9 +1,19 @@
-import { IsEmail, IsOptional, IsString, Length } from 'class-validator';
+import {
+  IsEmail,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Length,
+} from 'class-validator';
 
 export class UserRegistrationDTO {
   @IsOptional()
   @IsString()
   strUnitId?: string; // Since `unitId` is BIGINT, we use string to handle large numbers.
+
+  @IsString()
+  @Length(1, 255)
+  strName: string; // User name with a maximum length of 255 characters.
 
   @IsEmail()
   @Length(1, 255)
@@ -35,19 +45,11 @@ export class UserRegistrationDTO {
   strMobileNumber: string; // Mobile number with a maximum length of 20 characters.
 
   @IsOptional()
-  @IsString()
-  strProfilePicture?: string; // Optional field for profile picture as a string.
-
-  @IsString()
-  @Length(1, 50)
-  strRole: string; // Role with a maximum length of 50 characters.
+  @IsNumber()
+  intRoleId: number;
 
   @IsOptional()
   @IsString()
   @Length(1, 50)
   strSession?: string; // Optional session field with a maximum length of 50 characters.
-
-  @IsString()
-  @Length(1, 255)
-  strUsername: string; // User name with a maximum length of 255 characters.
 }
