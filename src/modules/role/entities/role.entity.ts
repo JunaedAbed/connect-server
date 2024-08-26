@@ -5,8 +5,8 @@ export type RoleDocument = HydratedDocument<Role>;
 
 @Schema({ collection: 'tblRole' })
 export class Role {
-  @Prop({ type: Number, index: true, unique: true, required: true })
-  intId: number; // Equivalent to SERIAL, Primary key in MongoDB
+  @Prop({ type: Number, required: true })
+  intRoleId: number;
 
   @Prop({
     type: String,

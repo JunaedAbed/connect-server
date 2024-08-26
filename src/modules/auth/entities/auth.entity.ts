@@ -5,9 +5,6 @@ export type LoginInfoDocument = HydratedDocument<LoginInfo>;
 
 @Schema({ collection: 'tblLoginInfo' })
 export class LoginInfo {
-  @Prop({ type: Number, required: false })
-  intUserId?: number;
-
   @Prop({ type: String, unique: true, required: false, maxlength: 255 })
   strEmail?: string;
 

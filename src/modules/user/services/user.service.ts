@@ -19,7 +19,6 @@ export class UserService {
     try {
       const userInfo = await this.userModel
         .findOne({ strEmail }) // Find the user by email
-        .populate('intOutletId', 'strName strOutletType')
         .populate('intRoleId', 'strRoleName')
         .exec(); // Execute the query
 
@@ -29,11 +28,10 @@ export class UserService {
     }
   }
 
-  async findByPhone(strPhone: string): Promise<User> {
+  async findByPhone(strMobileNumber: string): Promise<User> {
     try {
       const userInfo = await this.userModel
-        .findOne({ strPhone }) // Find the user by phone
-        .populate('intOutletId', 'strName strOutletType') // Populate outlet fields
+        .findOne({ strMobileNumber }) // Find the user by phone
         .populate('intRoleId', 'strRoleName') // Populate role fields
         .exec(); // Execute the query
 
@@ -44,16 +42,17 @@ export class UserService {
   }
 
   async createUser(userDto: CreateUserDto) {
-    if (!userDto.strEmail || !userDto.strPassword) {
-      throw new BadRequestException('Email and password are required');
-    } else if (await this.findByEmail(userDto.strEmail)) {
-      throw new BadRequestException(
-        'Email already exists. Please use another email',
-      );
-    }
+    // if (!userDto.strEmail || !userDto.strPassword) {
+    //   throw new BadRequestException('Email and password are required');
+    // } else if (await this.findByEmail(userDto.strEmail)) {
+    //   throw new BadRequestException(
+    //     'Email already exists. Please use another email',
+    //   );
+    // }
 
     try {
       const userInfo = await this.userModel.create(userDto);
+
       if (!userInfo) {
         throw new InternalServerErrorException('Could not create user');
       }

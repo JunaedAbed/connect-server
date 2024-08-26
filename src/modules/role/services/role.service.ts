@@ -22,7 +22,8 @@ export class RoleService {
 
   async findById(id: number) {
     try {
-      const roleInfo = await this.roleModel.findOne({ intId: id });
+      const roleInfo = await this.roleModel.findOne({ intRoleId: id });
+      console.log('role', roleInfo);
       if (!roleInfo) throw new NotFoundException('Role Not Found');
       return roleInfo;
     } catch (error) {

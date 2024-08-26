@@ -5,9 +5,6 @@ export type UserDocument = HydratedDocument<User>;
 
 @Schema({ collection: 'tblUser' })
 export class User {
-  @Prop({ type: Number, index: true, unique: true, required: true })
-  intUserID: number; // Equivalent to SERIAL, Primary key in MongoDB
-
   @Prop({ type: String })
   strUnitId: string; // BIGINT (Stored as a string to accommodate large numbers in MongoDB)
 
