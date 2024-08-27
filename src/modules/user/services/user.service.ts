@@ -1,15 +1,12 @@
-import {
-  BadRequestException,
-  Injectable,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { User } from '../entities/user.entity';
+import { IUserService } from './user-service.interface';
 
 @Injectable()
-export class UserService {
+export class UserService implements IUserService {
   constructor(
     @InjectModel(User.name)
     private userModel: Model<User>,
@@ -41,7 +38,7 @@ export class UserService {
     }
   }
 
-  async createUser(userDto: CreateUserDto) {
+  async createUser(userDto: CreateUserDto): Promise<User> {
     // if (!userDto.strEmail || !userDto.strPassword) {
     //   throw new BadRequestException('Email and password are required');
     // } else if (await this.findByEmail(userDto.strEmail)) {

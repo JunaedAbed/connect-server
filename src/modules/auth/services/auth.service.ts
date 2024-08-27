@@ -1,5 +1,5 @@
 import {
-  BadRequestException,
+  Inject,
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
@@ -7,24 +7,27 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { UserService } from 'src/modules/user/services/user.service';
-import { RoleService } from 'src/modules/role/services/role.service';
+import { IRoleService } from 'src/modules/role/services/role-service.interface';
+import { CreateUserDto } from 'src/modules/user/dto/create-user.dto';
+import { User } from 'src/modules/user/entities/user.entity';
 import { hashPassword } from 'src/utils/bcrypt';
+import { AuthDTO } from '../dto/auth.dto';
 import { UserRegistrationDTO } from '../dto/user-reg.dto';
 import { LoginInfo } from '../entities/auth.entity';
-import { AuthDTO } from '../dto/auth.dto';
+import { IAuthService } from './auth-service.interface';
+import { IUserService } from 'src/modules/user/services/user-service.interface';
 
 @Injectable()
-export class AuthService {
+export class AuthService implements IAuthService {
   constructor(
     @InjectModel(LoginInfo.name)
     private loginInfoModel: Model<LoginInfo>,
-    private userService: UserService,
-    private roleService: RoleService,
+    @Inject('IUserService') private userService: IUserService,
+    @Inject('IRoleService') private roleService: IRoleService,
     private readonly jwtService: JwtService,
   ) {}
 
-  async login(authDTO: AuthDTO) {
+  async login(authDTO: AuthDTO): Promise<LoginInfo> {
     try {
       // const { strEmailOrPhone, strPassword } = authDTO;
       // let user: any;
@@ -95,85 +98,86 @@ export class AuthService {
       //   isAllBranch: user.isAllBranch,
       //   isOrderFullAccess: user.isOrderFullAccess,
       // };
+      return;
     } catch (error) {
       throw error;
     }
   }
 
-  async registration(registerDTO: UserRegistrationDTO) {
-    if (
-      !registerDTO.strEmail ||
-      !registerDTO.strPassword ||
-      !registerDTO.strMobileNumber
-    ) {
-      throw new UnauthorizedException('Invalid credentials!');
-    }
-    try {
-      const loginInfo = await this.loginInfoModel.findOne({
-        where: { strPhone: registerDTO.strMobileNumber },
-      });
-      if (!loginInfo) throw new BadRequestException('OTP is not recognized');
+  // async registration(registerDTO: UserRegistrationDTO) {
+  //   if (
+  //     !registerDTO.strEmail ||
+  //     !registerDTO.strPassword ||
+  //     !registerDTO.strMobileNumber
+  //   ) {
+  //     throw new UnauthorizedException('Invalid credentials!');
+  //   }
+  //   try {
+  //     const loginInfo = await this.loginInfoModel.findOne({
+  //       where: { strPhone: registerDTO.strMobileNumber },
+  //     });
+  //     if (!loginInfo) throw new BadRequestException('OTP is not recognized');
 
-      const isUserEmailExist = await this.userService.findByEmail(
-        registerDTO.strEmail,
-      );
-      if (isUserEmailExist) {
-        throw new UnauthorizedException('user already exist with this email!');
-      }
-      const isUserPhoneExist = await this.userService.findByPhone(
-        registerDTO.strMobileNumber,
-      );
-      if (isUserPhoneExist) {
-        throw new UnauthorizedException(
-          'user already exist with this phone number!',
-        );
-      }
+  //     const isUserEmailExist = await this.userService.findByEmail(
+  //       registerDTO.strEmail,
+  //     );
+  //     if (isUserEmailExist) {
+  //       throw new UnauthorizedException('user already exist with this email!');
+  //     }
+  //     const isUserPhoneExist = await this.userService.findByPhone(
+  //       registerDTO.strMobileNumber,
+  //     );
+  //     if (isUserPhoneExist) {
+  //       throw new UnauthorizedException(
+  //         'user already exist with this phone number!',
+  //       );
+  //     }
 
-      const hashedPassword = await hashPassword(registerDTO.strPassword);
-      const user = await this.userService.createUser({
-        strName: registerDTO.strName,
-        strEmail: registerDTO.strEmail,
-        strPassword: hashedPassword,
-        strMobileNumber: registerDTO.strMobileNumber,
-        strUserImage: registerDTO.strUserImage,
-        strDeviceToken: registerDTO.strDeviceToken,
-        intRoleId: registerDTO.intRoleId,
-      });
-      if (!user) {
-        throw new InternalServerErrorException('Could not create user');
-      }
+  //     const hashedPassword = await hashPassword(registerDTO.strPassword);
+  //     const user = await this.userService.createUser({
+  //       strName: registerDTO.strName,
+  //       strEmail: registerDTO.strEmail,
+  //       strPassword: hashedPassword,
+  //       strMobileNumber: registerDTO.strMobileNumber,
+  //       strUserImage: registerDTO.strUserImage,
+  //       strDeviceToken: registerDTO.strDeviceToken,
+  //       intRoleId: registerDTO.intRoleId,
+  //     });
+  //     if (!user) {
+  //       throw new InternalServerErrorException('Could not create user');
+  //     }
 
-      const role = await this.roleService.findById(user.intRoleId);
-      const payload = {
-        email: user.strEmail,
-        intId: user.id,
-        password: user.strPassword,
-        role: role.strRoleName,
-      };
+  //     const role = await this.roleService.findById(user.intRoleId);
+  //     const payload = {
+  //       email: user.strEmail,
+  //       intId: user.id,
+  //       password: user.strPassword,
+  //       role: role.strRoleName,
+  //     };
 
-      const expiresIn = '30d';
-      const strRefresh_token = await this.jwtService.signAsync(payload, {
-        expiresIn,
-      });
+  //     const expiresIn = '30d';
+  //     const strRefresh_token = await this.jwtService.signAsync(payload, {
+  //       expiresIn,
+  //     });
 
-      const newUser = await this.loginInfoModel.findByIdAndUpdate(user.id, {
-        _id: user.id,
-        strEmail: user.strEmail,
-        strPassword: user.strPassword,
-        dteLastLogin: new Date(),
-        strRefresh_token: strRefresh_token,
-      });
-      if (!newUser) {
-        throw new InternalServerErrorException('Could not create user');
-      }
+  //     const newUser = await this.loginInfoModel.findByIdAndUpdate(user.id, {
+  //       _id: user.id,
+  //       strEmail: user.strEmail,
+  //       strPassword: user.strPassword,
+  //       dteLastLogin: new Date(),
+  //       strRefresh_token: strRefresh_token,
+  //     });
+  //     if (!newUser) {
+  //       throw new InternalServerErrorException('Could not create user');
+  //     }
 
-      return user;
-    } catch (error) {
-      throw error;
-    }
-  }
+  //     return user;
+  //   } catch (error) {
+  //     throw error;
+  //   }
+  // }
 
-  async userRegistration(registerDTO: UserRegistrationDTO) {
+  async userRegistration(registerDTO: UserRegistrationDTO): Promise<User> {
     if (
       !registerDTO.strEmail ||
       !registerDTO.strPassword ||
@@ -203,7 +207,6 @@ export class AuthService {
       const isRoleExist = await this.roleService.findById(
         registerDTO.intRoleId,
       );
-      console.log('afasd', isRoleExist);
 
       if (!isRoleExist) {
         throw new UnauthorizedException('Role does not exist!');
@@ -214,42 +217,51 @@ export class AuthService {
       const user = await this.userService.createUser({
         strName: registerDTO.strName,
         strEmail: registerDTO.strEmail,
-        strPassword: hashedPassword,
-        strMobileNumber: registerDTO.strMobileNumber,
         strUserImage: registerDTO.strUserImage,
+        strPassword: hashedPassword,
         strDeviceToken: registerDTO.strDeviceToken,
+        strEnroll: registerDTO.strEnroll,
+        strMobileNumber: registerDTO.strMobileNumber,
         intRoleId: registerDTO.intRoleId,
+        strUnitId: registerDTO.strUnitId,
+        strCredential: registerDTO.strCredential,
+        strSession: registerDTO.strSession,
       });
 
       if (!user) {
         throw new InternalServerErrorException('Could not create user');
       }
 
-      const role = await this.roleService.findById(user.intRoleId);
-      const payload = {
-        email: user.strEmail,
-        id: user.id,
-        password: user.strPassword,
-        role: role.strRoleName,
-      };
+      // const role = await this.roleService.findById(user.intRoleId);
+      // const payload = {
+      //   email: user.strEmail,
+      //   id: user.id,
+      //   password: user.strPassword,
+      //   role: role.strRoleName,
+      // };
 
-      const expiresIn = '30d';
-      const strRefresh_token = await this.jwtService.signAsync(payload, {
-        expiresIn,
-      });
+      // const expiresIn = '30d';
+      // const strRefresh_token = await this.jwtService.signAsync(payload, {
+      //   expiresIn,
+      // });
 
-      const newUser = new this.loginInfoModel({
-        _id: user.id,
-        strEmail: user.strEmail,
-        strPassword: user.strPassword,
-        strPhone: registerDTO.strMobileNumber,
-        dteLastLogin: new Date(),
-        strRefresh_token: strRefresh_token,
-      }).save();
+      // const currentDate = new Date();
+      // const localDate = new Date(
+      //   currentDate.getTime() - currentDate.getTimezoneOffset() * 60000,
+      // );
 
-      if (!newUser) {
-        throw new InternalServerErrorException('Could not create user');
-      }
+      // const newUser = new this.loginInfoModel({
+      //   _id: user.id,
+      //   strEmail: user.strEmail,
+      //   strPassword: user.strPassword,
+      //   strPhone: registerDTO.strMobileNumber,
+      //   dteLastLogin: localDate,
+      //   strRefresh_token: strRefresh_token,
+      // }).save();
+
+      // if (!newUser) {
+      //   throw new InternalServerErrorException('Could not create user');
+      // }
       return user;
     } catch (error) {
       throw error;

@@ -4,11 +4,11 @@ import { success } from 'src/helpers/http';
 import { Roles } from 'src/middleware/role/roles.decorator';
 import { RolesGuard } from 'src/middleware/role/roles.gaurd';
 import { SUCCESS } from 'src/shared/constants/httpCodes';
-import { RoleService } from '../services/role.service';
+import { IRoleService } from '../services/role-service.interface';
 
 @Controller('role')
 export class RoleController {
-  constructor(private readonly roleService: RoleService) {}
+  constructor(private readonly roleService: IRoleService) {}
 
   @Get()
   @UseGuards(RolesGuard)

@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from './entities/user.entity';
-import { UserController } from './controllers/user.controller';
-import { UserService } from './services/user.service';
-import { RoleModule } from 'src/modules/role/role.module';
 import { JwtService } from '@nestjs/jwt';
+import { MongooseModule } from '@nestjs/mongoose';
+import { RoleModule } from 'src/modules/role/role.module';
+import { UserController } from './controllers/user.controller';
+import { User, UserSchema } from './entities/user.entity';
+import { UserService } from './services/user.service';
 
 @Module({
   imports: [
@@ -12,7 +12,13 @@ import { JwtService } from '@nestjs/jwt';
     RoleModule,
   ],
   controllers: [UserController],
-  providers: [UserService, JwtService],
-  exports: [UserService],
+  providers: [
+    {
+      provide: 'IUserService',
+      useClass: UserService,
+    },
+    JwtService,
+  ],
+  exports: ['IUserService'],
 })
 export class UserModule {}

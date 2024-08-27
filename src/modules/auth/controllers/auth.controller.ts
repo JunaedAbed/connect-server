@@ -26,20 +26,6 @@ export class AuthController {
   }
 
   @Post('register')
-  async register(
-    @Req() request: Request,
-    @Res() response: Response,
-    @Body() registerDTO: UserRegistrationDTO,
-  ) {
-    try {
-      const data: any = await this.authService.registration(registerDTO);
-      return response.status(SUCCESS).json(success(data));
-    } catch (error) {
-      return response.status(REQUEST_ERROR).json(requestInvalid(error));
-    }
-  }
-
-  @Post('user/register')
   async userRegister(
     @Req() request: Request,
     @Res() response: Response,
