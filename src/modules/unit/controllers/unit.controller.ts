@@ -15,7 +15,6 @@ import { success } from 'src/helpers/http';
 import { SUCCESS } from 'src/shared/constants/httpCodes';
 import { CreateUnitDto } from '../dto/create-unit.dto';
 import { IUnitService } from '../services/unit-service.interface';
-import { UpdateUnitDto } from '../dto/update-unit.dto';
 
 @Controller('unit')
 export class UnitController {
@@ -31,7 +30,6 @@ export class UnitController {
   ) {
     try {
       const data: any = await this.unitService.createUnit(unitDto);
-
       return response.status(SUCCESS).json(success(data));
     } catch (error) {
       throw error;
@@ -39,50 +37,34 @@ export class UnitController {
   }
 
   @Get()
-  findAll() {
-    return this.unitService.findAll();
+  async findAll(@Res() response: Response) {
+    const data: any = await this.unitService.findAll();
+    return response.status(SUCCESS).json(success(data));
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.unitService.findOne(id);
+  async findOne(@Param('id') id: string, @Res() response: Response) {
+    const data: any = await this.unitService.findOne(id);
+    return response.status(SUCCESS).json(success(data));
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUnitDto: UpdateUnitDto) {
-    return this.unitService.updateUnit(id, updateUnitDto);
+  async update(
+    @Param('id') id: string,
+    @Body() updateUnitDto: CreateUnitDto,
+    @Res() response: Response,
+  ) {
+    try {
+      const data: any = await this.unitService.updateUnit(id, updateUnitDto);
+      return response.status(SUCCESS).json(success(data));
+    } catch (error) {
+      throw error;
+    }
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.unitService.deleteUnit(id);
+  async remove(@Param('id') id: string, @Res() response: Response) {
+    const data: any = await this.unitService.deleteUnit(id);
+    return response.status(SUCCESS).json(success(data));
   }
-
-  // @Post()
-  // create(@Body() createBlaaaaaaDto: CreateBlaaaaaaDto) {
-  //   return this.blaaaaaaService.create(createBlaaaaaaDto);
-  // }
-
-  // @Get()
-  // findAll() {
-  //   return this.blaaaaaaService.findAll();
-  // }
-
-  // @Get(':id')
-  // findOne(@Param('id') id: string) {
-  //   return this.blaaaaaaService.findOne(+id);
-  // }
-
-  // @Patch(':id')
-  // update(
-  //   @Param('id') id: string,
-  //   @Body() updateBlaaaaaaDto: UpdateBlaaaaaaDto,
-  // ) {
-  //   return this.blaaaaaaService.update(+id, updateBlaaaaaaDto);
-  // }
-
-  // @Delete(':id')
-  // remove(@Param('id') id: string) {
-  //   return this.blaaaaaaService.remove(+id);
-  // }
 }

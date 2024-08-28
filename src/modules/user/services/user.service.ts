@@ -16,7 +16,7 @@ export class UserService implements IUserService {
     try {
       const userInfo = await this.userModel
         .findOne({ strEmail }) // Find the user by email
-        .populate('intRoleId', 'strRoleName')
+        .populate('strRoleId', 'strRoleName')
         .exec(); // Execute the query
 
       return userInfo;
@@ -29,7 +29,7 @@ export class UserService implements IUserService {
     try {
       const userInfo = await this.userModel
         .findOne({ strMobileNumber }) // Find the user by phone
-        .populate('intRoleId', 'strRoleName') // Populate role fields
+        .populate('strRoleId', 'strRoleName') // Populate role fields
         .exec(); // Execute the query
 
       return userInfo;

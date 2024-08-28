@@ -35,6 +35,6 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   strMobileNumber: string; // Mobile number with a maximum length of 20 characters.
 
   @IsOptional()
-  @IsNumber()
-  intRoleId: number;
+  @IsString()
+  strRoleId: string;
 }

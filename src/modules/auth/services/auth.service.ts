@@ -205,7 +205,7 @@ export class AuthService implements IAuthService {
       }
 
       const isRoleExist = await this.roleService.findById(
-        registerDTO.intRoleId,
+        registerDTO.strRoleId,
       );
 
       if (!isRoleExist) {
@@ -222,7 +222,7 @@ export class AuthService implements IAuthService {
         strDeviceToken: registerDTO.strDeviceToken,
         strEnroll: registerDTO.strEnroll,
         strMobileNumber: registerDTO.strMobileNumber,
-        intRoleId: registerDTO.intRoleId,
+        strRoleId: registerDTO.strRoleId,
         strUnitId: registerDTO.strUnitId,
         strCredential: registerDTO.strCredential,
         strSession: registerDTO.strSession,

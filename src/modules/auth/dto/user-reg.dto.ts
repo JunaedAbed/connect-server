@@ -44,9 +44,8 @@ export class UserRegistrationDTO {
   @Length(1, 20)
   strMobileNumber: string; // Mobile number with a maximum length of 20 characters.
 
-  @IsOptional()
-  @IsNumber()
-  intRoleId: number;
+  @IsString()
+  strRoleId: string;
 
   @IsOptional()
   @IsString()

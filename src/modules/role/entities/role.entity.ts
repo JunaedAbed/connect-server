@@ -5,18 +5,12 @@ export type RoleDocument = HydratedDocument<Role>;
 
 @Schema({ collection: 'tblRole' })
 export class Role {
-  @Prop({ type: Number, required: true })
-  intRoleId: number;
-
   @Prop({
     type: String,
-    enum: ['super-admin', 'admin', 'group-admin', 'user'],
+    // enum: ['super-admin', 'admin', 'group-admin', 'user'],
     required: true,
   })
   strRoleName: string; // ENUM in MySQL, stored as string in MongoDB
-
-  @Prop({ type: Number, required: true })
-  intCreatedBy: number; // Foreign key or created by user ID
 
   @Prop({ type: Date, default: Date.now })
   dteCreatedAt: Date; // TIMESTAMP, default is current date

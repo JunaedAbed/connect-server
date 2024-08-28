@@ -33,6 +33,6 @@ export class UserUpdateDTO {
   strMobileNumber: string; // Mobile number with a maximum length of 20 characters.
 
   @IsOptional()
-  @IsNumber()
-  intRoleId: number;
+  @IsString()
+  strRoleId: string;
 }

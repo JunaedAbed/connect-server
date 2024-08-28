@@ -32,8 +32,8 @@ export class User {
   @Prop({ type: String, maxlength: 20 })
   strMobileNumber: string; // VARCHAR(20)
 
-  @Prop({ type: Number })
-  intRoleId: number;
+  @Prop({ type: String })
+  strRoleId: string;
 
   @Prop({ type: String, maxlength: 50 })
   strSession: string; // VARCHAR(50)

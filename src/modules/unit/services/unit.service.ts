@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -6,7 +7,6 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreateUnitDto } from '../dto/create-unit.dto';
-import { UpdateUnitDto } from '../dto/update-unit.dto';
 import { Unit } from '../entities/unit.entity';
 import { IUnitService } from './unit-service.interface';
 
@@ -26,9 +26,9 @@ export class UnitService implements IUnitService {
     }
   }
 
-  async findOne(strUnitId: string): Promise<Unit> {
+  async findOne(id: string): Promise<Unit> {
     try {
-      const unitInfo = await this.unitModel.findOne({ strUnitId });
+      const unitInfo = await this.unitModel.findById(id);
       if (!unitInfo) {
         throw new NotFoundException('Unit not found');
       }
@@ -40,6 +40,15 @@ export class UnitService implements IUnitService {
 
   async createUnit(unitDto: CreateUnitDto): Promise<Unit> {
     try {
+      const existingUnit = await this.unitModel.findOne({
+        strUnitName: unitDto.strUnitName,
+      });
+      if (existingUnit) {
+        throw new BadRequestException(
+          `Unit with name ${unitDto.strUnitName} already exists`,
+        );
+      }
+
       const unitInfo = await this.unitModel.create(unitDto);
       if (!unitInfo) {
         throw new InternalServerErrorException('Could not create unit');
@@ -49,18 +58,16 @@ export class UnitService implements IUnitService {
       throw error;
     }
   }
-  async updateUnit(
-    strUnitId: string,
-    updateUnitDto: UpdateUnitDto,
-  ): Promise<Unit> {
+
+  async updateUnit(id: string, updateUnitDto: CreateUnitDto): Promise<Unit> {
     try {
-      const updatedUnit = await this.unitModel.findOneAndUpdate(
-        { strUnitId },
+      const updatedUnit = await this.unitModel.findByIdAndUpdate(
+        id,
         updateUnitDto,
         { new: true },
       );
       if (!updatedUnit) {
-        throw new InternalServerErrorException('Could not update unit');
+        throw new BadRequestException('Could not update unit');
       }
       return updatedUnit;
     } catch (error) {
@@ -68,11 +75,15 @@ export class UnitService implements IUnitService {
     }
   }
 
-  async deleteUnit(strUnitId: string): Promise<{ deleted: boolean }> {
+  async deleteUnit(id: string): Promise<{ deleted: boolean }> {
     try {
-      const result = await this.unitModel.deleteOne({ strUnitId });
+      const result = await this.unitModel.findByIdAndUpdate(
+        id,
+        { isActive: false, dteUpdatedAt: Date.now() },
+        { new: true },
+      );
 
-      if (result.deletedCount === 0) {
+      if (!result) {
         throw new NotFoundException('Unit not found');
       }
 
