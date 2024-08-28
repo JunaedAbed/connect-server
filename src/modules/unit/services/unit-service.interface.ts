@@ -4,6 +4,8 @@ import { Unit } from '../entities/unit.entity';
 
 export interface IUnitService {
   createUnit(unitDto: CreateUnitDto): Promise<Unit>;
-  updateUnit(unitDto: UpdateUnitDto): Promise<Unit>;
-  getUnitName(strUnitId: string): Promise<Unit>;
+  updateUnit(id: string, unitDto: UpdateUnitDto): Promise<Unit>;
+  findAll(): Promise<Unit[]>;
+  findOne(strUnitId: string): Promise<Unit>;
+  deleteUnit(strUnitId: string): Promise<{ deleted: boolean }>;
 }

@@ -1,7 +1,7 @@
 import { Body, Controller, Post, Req, Res } from '@nestjs/common';
 import { Response } from 'express';
-import { requestInvalid, success } from 'src/helpers/http';
-import { REQUEST_ERROR, SUCCESS } from 'src/shared/constants/httpCodes';
+import { success } from 'src/helpers/http';
+import { SUCCESS } from 'src/shared/constants/httpCodes';
 import { AuthDTO } from '../dto/auth.dto';
 import { UserRegistrationDTO } from '../dto/user-reg.dto';
 import { AuthService } from '../services/auth.service';
