@@ -18,10 +18,10 @@ export class LoginInfo {
   intOtp?: number;
 
   @Prop({ type: String, required: false, maxlength: 512 })
-  strAccess_token?: string;
+  strAccessToken?: string;
 
   @Prop({ type: String, required: false, maxlength: 512 })
-  strRefresh_token?: string;
+  strRefreshToken?: string;
 
   @Prop({ type: Date, default: Date.now, required: false })
   dteCreatedAt?: Date;

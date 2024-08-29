@@ -1,21 +1,23 @@
 import {
+  BadRequestException,
   Inject,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
+import { compare } from 'bcrypt';
 import { Model } from 'mongoose';
 import { IRoleService } from 'src/modules/role/services/role-service.interface';
-import { CreateUserDto } from 'src/modules/user/dto/create-user.dto';
 import { User } from 'src/modules/user/entities/user.entity';
+import { IUserService } from 'src/modules/user/services/user-service.interface';
 import { hashPassword } from 'src/utils/bcrypt';
 import { AuthDTO } from '../dto/auth.dto';
 import { UserRegistrationDTO } from '../dto/user-reg.dto';
 import { LoginInfo } from '../entities/auth.entity';
 import { IAuthService } from './auth-service.interface';
-import { IUserService } from 'src/modules/user/services/user-service.interface';
 
 @Injectable()
 export class AuthService implements IAuthService {
@@ -27,77 +29,132 @@ export class AuthService implements IAuthService {
     private readonly jwtService: JwtService,
   ) {}
 
+  public async generateAccessToken(
+    existingUser: LoginInfo,
+  ): Promise<{ accessToken: string; expiresIn: Date }> {
+    const oldRefToken = existingUser.strRefreshToken;
+    if (!oldRefToken) {
+      throw new NotFoundException(
+        'Refresh token not found to generate Access token',
+      );
+    }
+    try {
+      const decodedRefToken: any = this.jwtService.decode(oldRefToken);
+      if (!decodedRefToken) {
+        throw new BadRequestException('Invalid refresh token');
+      }
+
+      const { email, intId, password } = decodedRefToken;
+      const payload = {
+        email: email,
+        intId: intId,
+        password: password,
+        roleId: existingUser.intRoleId,
+      };
+
+      const expiresIn = new Date();
+      expiresIn.setHours(expiresIn.getHours() + 8); // Expire in 8 hour
+
+      const accessToken = await this.jwtService.signAsync(payload, {
+        expiresIn: '8h',
+      });
+
+      await this.loginInfoModel.findByIdAndUpdate(existingUser.intId, {
+        strAccess_token: accessToken,
+        dteLastLogin: new Date(),
+      });
+      return { accessToken, expiresIn };
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async login(authDTO: AuthDTO): Promise<LoginInfo> {
     try {
-      // const { strEmailOrPhone, strPassword } = authDTO;
-      // let user: any;
-      // let isEmailLogin = false;
-      // if (strEmailOrPhone.includes('@')) {
-      //   isEmailLogin = true;
-      //   user = await this.userService.findByEmail(strEmailOrPhone);
-      // } else {
-      //   user = await this.userService.findByPhone(strEmailOrPhone);
-      // }
-      // if (!user) {
-      //   throw new UnauthorizedException(
-      //     'User not found with this email or phone!',
-      //   );
-      // }
-      // const passwordMatched = await compare(strPassword, user.strPassword);
-      // if (!passwordMatched) {
-      //   throw new UnauthorizedException('Wrong password');
-      // }
-      // const existingUser = await this.loginInfoRepository.findOne({
-      //   where: isEmailLogin
-      //     ? { strEmail: strEmailOrPhone }
-      //     : { strPhone: strEmailOrPhone },
-      // });
-      // if (!existingUser) {
-      //   throw new InternalServerErrorException(
-      //     'User data not found in the login repository.',
-      //   );
-      // }
-      // const role = await this.roleService.findById(user.intRoleId);
-      // const userAdditionalInfo = await this.loginInfoRepository
-      //   .createQueryBuilder('loginInfo')
-      //   .leftJoin('tblUser', 'user', 'user.intId = loginInfo.intUserId')
-      //   .leftJoin('tblOutlet', 'outlet', 'outlet.intId = user.intOutletId')
-      //   .select([
-      //     'loginInfo.intUserId AS intId',
-      //     'outlet.strName AS strOutletName',
-      //     'outlet.intStoreId AS intStoreId',
-      //     'outlet.strOutletType AS strOutletType',
-      //   ])
-      //   .where('loginInfo.intUserId = :intUserId', { intUserId: user.intId })
-      //   .getRawOne();
-      // const userToken = {
-      //   ...existingUser,
-      //   intRoleId: user.intRoleId,
-      // };
-      // const accessToken = await this.generateAccessToken(userToken);
-      // const refreshToken = await this.generateRefreshToken(userToken);
-      // return {
-      //   accessToken: accessToken.accessToken,
-      //   accessTokenExpiresIn: accessToken.expiresIn,
-      //   refreshToken: refreshToken.refreshToken,
-      //   refreshTokenExpiresIn: refreshToken.expiresIn,
-      //   strRole: role.strRoleName,
-      //   intId: user.intId,
-      //   intOrgId: user.intOrgId,
-      //   intOutletId: user.intOutletId,
-      //   strOutletName: userAdditionalInfo.strOutletName,
-      //   strOutletType: userAdditionalInfo.strOutletType,
-      //   intStoreId:
-      //     userAdditionalInfo.intStoreId === 0
-      //       ? user.intOutletId
-      //       : userAdditionalInfo.intStoreId,
-      //   strName: user.strName,
-      //   strEmail: user.strEmail,
-      //   strPhone: user.strPhone,
-      //   intRoleId: user.intRoleId,
-      //   isAllBranch: user.isAllBranch,
-      //   isOrderFullAccess: user.isOrderFullAccess,
-      // };
+      const { strEmailOrPhone, strPassword } = authDTO;
+      let user: User;
+      let isEmailLogin = false;
+      if (strEmailOrPhone.includes('@')) {
+        isEmailLogin = true;
+        user = await this.userService.findByEmail(strEmailOrPhone);
+      } else {
+        user = await this.userService.findByPhone(strEmailOrPhone);
+      }
+      if (!user) {
+        throw new NotFoundException('User not found with this email or phone!');
+      }
+      const passwordMatched = await compare(strPassword, user.strPassword);
+      if (!passwordMatched) {
+        throw new UnauthorizedException('Wrong password');
+      }
+      const existingUser = await this.loginInfoModel.findOne({
+        where: isEmailLogin
+          ? { strEmail: strEmailOrPhone }
+          : { strPhone: strEmailOrPhone },
+      });
+      if (!existingUser) {
+        throw new NotFoundException('User data not found');
+      }
+      const role = await this.roleService.findById(user.strRoleId);
+
+      const userAdditionalInfo = await this.loginInfoModel.aggregate([
+        {
+          $match: {
+            strEmail: user.strEmail, // Adjust the matching field as needed
+          },
+        },
+        {
+          $lookup: {
+            from: 'tblUser', // The MongoDB collection name for users
+            localField: 'strEmail', // Field from LoginInfo
+            foreignField: 'strEmail', // Field from User
+            as: 'user',
+          },
+        },
+        {
+          $unwind: '$user', // Unwind the user array to a single document
+        },
+        {
+          $project: {
+            intId: '$user._id', // The user's MongoDB ObjectId
+            strName: '$user.strName',
+            strMobileNumber: '$user.strMobileNumber',
+            strRoleId: '$user.strRoleId',
+            // Add any other fields you need from the User schema
+          },
+        },
+      ]);
+
+      const result = userAdditionalInfo[0];
+
+      const userToken = {
+        ...existingUser,
+        intRoleId: user.intRoleId,
+      };
+      const accessToken = await this.generateAccessToken(userToken);
+      const refreshToken = await this.generateRefreshToken(userToken);
+      return {
+        accessToken: accessToken.accessToken,
+        accessTokenExpiresIn: accessToken.expiresIn,
+        refreshToken: refreshToken.refreshToken,
+        refreshTokenExpiresIn: refreshToken.expiresIn,
+        strRole: role.strRoleName,
+        intId: user.intId,
+        intOrgId: user.intOrgId,
+        intOutletId: user.intOutletId,
+        strOutletName: userAdditionalInfo.strOutletName,
+        strOutletType: userAdditionalInfo.strOutletType,
+        intStoreId:
+          userAdditionalInfo.intStoreId === 0
+            ? user.intOutletId
+            : userAdditionalInfo.intStoreId,
+        strName: user.strName,
+        strEmail: user.strEmail,
+        strPhone: user.strPhone,
+        intRoleId: user.intRoleId,
+        isAllBranch: user.isAllBranch,
+        isOrderFullAccess: user.isOrderFullAccess,
+      };
       return;
     } catch (error) {
       throw error;
