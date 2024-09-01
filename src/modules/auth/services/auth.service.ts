@@ -12,6 +12,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { compare } from 'bcrypt';
 import { Model } from 'mongoose';
 import { IRoleService } from 'src/modules/role/services/role-service.interface';
+import { IUnitService } from 'src/modules/unit/services/unit-service.interface';
 import { CreateUserDto } from 'src/modules/user/dto/create-user.dto';
 import { User } from 'src/modules/user/entities/user.entity';
 import { IUserService } from 'src/modules/user/services/user-service.interface';
@@ -19,7 +20,6 @@ import { hashPassword } from 'src/utils/bcrypt';
 import { AuthDTO } from '../dto/auth.dto';
 import { LoginInfo } from '../entities/auth.entity';
 import { IAuthService } from './auth-service.interface';
-import { IUnitService } from 'src/modules/unit/services/unit-service.interface';
 
 @Injectable()
 export class AuthService implements IAuthService {
@@ -117,7 +117,7 @@ export class AuthService implements IAuthService {
   async login(authDTO: AuthDTO) {
     try {
       const { strEmailOrPhone, strPassword } = authDTO;
-      let user: any;
+      let user: User;
       let isEmailLogin = false;
       if (strEmailOrPhone.includes('@')) {
         isEmailLogin = true;
@@ -128,6 +128,7 @@ export class AuthService implements IAuthService {
       if (!user) {
         throw new NotFoundException('User not found with this email or phone!');
       }
+
       const passwordMatched = await compare(strPassword, user.strPassword);
       if (!passwordMatched) {
         throw new UnauthorizedException('Wrong password');
@@ -184,12 +185,8 @@ export class AuthService implements IAuthService {
         refreshToken: refreshToken.refreshToken,
         refreshTokenExpiresIn: refreshToken.expiresIn,
         strRole: role.strRoleName,
-        intId: user.intId,
-        intOrgId: user.intOrgId,
         strName: user.strName,
         strEmail: user.strEmail,
-        strPhone: user.strPhone,
-        strRoleId: user.strRoleId,
       };
     } catch (error) {
       throw error;
@@ -318,36 +315,6 @@ export class AuthService implements IAuthService {
         throw new InternalServerErrorException('Could not create user');
       }
 
-      // const role = await this.roleService.findById(user.intRoleId);
-      // const payload = {
-      //   email: user.strEmail,
-      //   id: user.id,
-      //   password: user.strPassword,
-      //   role: role.strRoleName,
-      // };
-
-      // const expiresIn = '30d';
-      // const strRefresh_token = await this.jwtService.signAsync(payload, {
-      //   expiresIn,
-      // });
-
-      // const currentDate = new Date();
-      // const localDate = new Date(
-      //   currentDate.getTime() - currentDate.getTimezoneOffset() * 60000,
-      // );
-
-      // const newUser = new this.loginInfoModel({
-      //   _id: user.id,
-      //   strEmail: user.strEmail,
-      //   strPassword: user.strPassword,
-      //   strPhone: registerDTO.strMobileNumber,
-      //   dteLastLogin: localDate,
-      //   strRefresh_token: strRefresh_token,
-      // }).save();
-
-      // if (!newUser) {
-      //   throw new InternalServerErrorException('Could not create user');
-      // }
       return user;
     } catch (error) {
       throw error;
