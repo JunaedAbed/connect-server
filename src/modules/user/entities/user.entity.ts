@@ -21,9 +21,6 @@ export class User {
   strPassword: string; // TEXT
 
   @Prop({ type: String })
-  strCredential: string; // TEXT
-
-  @Prop({ type: String })
   strDeviceToken: string; // TEXT
 
   @Prop({ type: String, maxlength: 50 })
@@ -35,8 +32,11 @@ export class User {
   @Prop({ type: String })
   strRoleId: string;
 
-  @Prop({ type: String, maxlength: 50 })
-  strSession: string; // VARCHAR(50)
+  @Prop({ type: Date, default: Date.now, required: false })
+  dteCreatedAt: Date;
+
+  @Prop({ type: Date, default: Date.now, required: false })
+  dteUpdatedAt: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

@@ -9,7 +9,6 @@ import { Model } from 'mongoose';
 import { CreateRoleDto } from '../dto/create-role.dto';
 import { Role } from '../entities/role.entity';
 import { IRoleService } from './role-service.interface';
-import { ValidationError } from 'class-validator';
 
 @Injectable()
 export class RoleService implements IRoleService {

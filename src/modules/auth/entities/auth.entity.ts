@@ -6,31 +6,31 @@ export type LoginInfoDocument = HydratedDocument<LoginInfo>;
 @Schema({ collection: 'tblLoginInfo' })
 export class LoginInfo {
   @Prop({ type: String, unique: true, required: false, maxlength: 255 })
-  strEmail?: string;
+  strEmail: string;
 
   @Prop({ type: String, required: false, maxlength: 512 })
-  strPhone?: string;
+  strMobileNumber: string;
 
   @Prop({ type: String, required: false, maxlength: 512 })
-  strPassword?: string;
+  strPassword: string;
 
   @Prop({ type: Number, required: false })
-  intOtp?: number;
+  intOtp: number;
 
   @Prop({ type: String, required: false, maxlength: 512 })
-  strAccessToken?: string;
+  strAccessToken: string;
 
   @Prop({ type: String, required: false, maxlength: 512 })
-  strRefreshToken?: string;
+  strRefreshToken: string;
 
   @Prop({ type: Date, default: Date.now, required: false })
-  dteCreatedAt?: Date;
+  dteCreatedAt: Date;
 
   @Prop({ type: Date, default: Date.now, required: false })
-  dteUpdatedAt?: Date;
+  dteUpdatedAt: Date;
 
   @Prop({ type: Date, default: Date.now, required: false })
-  dteLastLogin?: Date;
+  dteLastLogin: Date;
 }
 
 export const LoginInfoSchema = SchemaFactory.createForClass(LoginInfo);

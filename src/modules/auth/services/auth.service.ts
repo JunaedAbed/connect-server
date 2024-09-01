@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -11,13 +12,14 @@ import { InjectModel } from '@nestjs/mongoose';
 import { compare } from 'bcrypt';
 import { Model } from 'mongoose';
 import { IRoleService } from 'src/modules/role/services/role-service.interface';
+import { CreateUserDto } from 'src/modules/user/dto/create-user.dto';
 import { User } from 'src/modules/user/entities/user.entity';
 import { IUserService } from 'src/modules/user/services/user-service.interface';
 import { hashPassword } from 'src/utils/bcrypt';
 import { AuthDTO } from '../dto/auth.dto';
-import { UserRegistrationDTO } from '../dto/user-reg.dto';
 import { LoginInfo } from '../entities/auth.entity';
 import { IAuthService } from './auth-service.interface';
+import { IUnitService } from 'src/modules/unit/services/unit-service.interface';
 
 @Injectable()
 export class AuthService implements IAuthService {
@@ -26,11 +28,12 @@ export class AuthService implements IAuthService {
     private loginInfoModel: Model<LoginInfo>,
     @Inject('IUserService') private userService: IUserService,
     @Inject('IRoleService') private roleService: IRoleService,
+    @Inject('IUnitService') private unitService: IUnitService,
     private readonly jwtService: JwtService,
   ) {}
 
   public async generateAccessToken(
-    existingUser: LoginInfo,
+    existingUser: any,
   ): Promise<{ accessToken: string; expiresIn: Date }> {
     const oldRefToken = existingUser.strRefreshToken;
     if (!oldRefToken) {
@@ -49,14 +52,14 @@ export class AuthService implements IAuthService {
         email: email,
         intId: intId,
         password: password,
-        roleId: existingUser.intRoleId,
+        roleId: existingUser.strRoleId,
       };
 
       const expiresIn = new Date();
-      expiresIn.setHours(expiresIn.getHours() + 8); // Expire in 8 hour
+      expiresIn.setHours(expiresIn.getHours() + 10); // Expire in 8 hour
 
       const accessToken = await this.jwtService.signAsync(payload, {
-        expiresIn: '8h',
+        expiresIn: '10h',
       });
 
       await this.loginInfoModel.findByIdAndUpdate(existingUser.intId, {
@@ -69,10 +72,52 @@ export class AuthService implements IAuthService {
     }
   }
 
-  async login(authDTO: AuthDTO): Promise<LoginInfo> {
+  public async generateRefreshToken(
+    existingUser: any,
+  ): Promise<{ refreshToken: string; expiresIn: Date }> {
+    const oldRefToken = existingUser.strRefresh_token;
+    if (!oldRefToken) {
+      throw new NotFoundException(
+        'Refresh token not found in the existing user.',
+      );
+    }
+    try {
+      const decodedRefToken: any = this.jwtService.decode(oldRefToken);
+      if (!decodedRefToken) {
+        throw new BadRequestException(
+          'Invalid refresh token in the decoded token.',
+        );
+      }
+
+      const { email, id, password } = decodedRefToken;
+      const payload = {
+        email: email,
+        intId: id,
+        password: password,
+        roleId: existingUser.intRoleId,
+      };
+
+      const expiresIn = new Date();
+      expiresIn.setDate(expiresIn.getDate() + 30); // Expire in 30 days
+
+      const refreshToken = await this.jwtService.signAsync(payload, {
+        expiresIn: '30d',
+      });
+
+      await this.loginInfoModel.findByIdAndUpdate(existingUser.id, {
+        strRefreshToken: refreshToken,
+      });
+
+      return { refreshToken, expiresIn };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async login(authDTO: AuthDTO) {
     try {
       const { strEmailOrPhone, strPassword } = authDTO;
-      let user: User;
+      let user: any;
       let isEmailLogin = false;
       if (strEmailOrPhone.includes('@')) {
         isEmailLogin = true;
@@ -87,14 +132,14 @@ export class AuthService implements IAuthService {
       if (!passwordMatched) {
         throw new UnauthorizedException('Wrong password');
       }
-      const existingUser = await this.loginInfoModel.findOne({
-        where: isEmailLogin
-          ? { strEmail: strEmailOrPhone }
-          : { strPhone: strEmailOrPhone },
-      });
-      if (!existingUser) {
-        throw new NotFoundException('User data not found');
-      }
+      // const existingUser = await this.loginInfoModel.findOne({
+      //   where: isEmailLogin
+      //     ? { strEmail: strEmailOrPhone }
+      //     : { strPhone: strEmailOrPhone },
+      // });
+      // if (!existingUser) {
+      //   throw new NotFoundException('User data not found');
+      // }
       const role = await this.roleService.findById(user.strRoleId);
 
       const userAdditionalInfo = await this.loginInfoModel.aggregate([
@@ -128,34 +173,24 @@ export class AuthService implements IAuthService {
       const result = userAdditionalInfo[0];
 
       const userToken = {
-        ...existingUser,
-        intRoleId: user.intRoleId,
+        ...user,
+        strRoleId: user.strRoleId,
       };
       const accessToken = await this.generateAccessToken(userToken);
       const refreshToken = await this.generateRefreshToken(userToken);
       return {
-        accessToken: accessToken.accessToken,
+        strAccessToken: accessToken.accessToken,
         accessTokenExpiresIn: accessToken.expiresIn,
         refreshToken: refreshToken.refreshToken,
         refreshTokenExpiresIn: refreshToken.expiresIn,
         strRole: role.strRoleName,
         intId: user.intId,
         intOrgId: user.intOrgId,
-        intOutletId: user.intOutletId,
-        strOutletName: userAdditionalInfo.strOutletName,
-        strOutletType: userAdditionalInfo.strOutletType,
-        intStoreId:
-          userAdditionalInfo.intStoreId === 0
-            ? user.intOutletId
-            : userAdditionalInfo.intStoreId,
         strName: user.strName,
         strEmail: user.strEmail,
         strPhone: user.strPhone,
-        intRoleId: user.intRoleId,
-        isAllBranch: user.isAllBranch,
-        isOrderFullAccess: user.isOrderFullAccess,
+        strRoleId: user.strRoleId,
       };
-      return;
     } catch (error) {
       throw error;
     }
@@ -234,55 +269,49 @@ export class AuthService implements IAuthService {
   //   }
   // }
 
-  async userRegistration(registerDTO: UserRegistrationDTO): Promise<User> {
+  async userRegistration(registerDTO: CreateUserDto): Promise<User> {
     if (
       !registerDTO.strEmail ||
       !registerDTO.strPassword ||
       !registerDTO.strMobileNumber
     ) {
-      throw new UnauthorizedException('Invalid credentials!');
+      throw new BadRequestException('Invalid credentials');
     }
 
     try {
       const isUserEmailExist = await this.userService.findByEmail(
         registerDTO.strEmail,
       );
-
       if (isUserEmailExist) {
-        throw new UnauthorizedException('user already exist with this email!');
+        throw new ConflictException('user already registered with this email');
       }
+
       const isUserPhoneExist = await this.userService.findByPhone(
         registerDTO.strMobileNumber,
       );
-
       if (isUserPhoneExist) {
-        throw new UnauthorizedException(
-          'user already exist with this phone number!',
+        throw new ConflictException(
+          'user already registered with this phone number',
         );
       }
 
       const isRoleExist = await this.roleService.findById(
         registerDTO.strRoleId,
       );
-
       if (!isRoleExist) {
-        throw new UnauthorizedException('Role does not exist!');
+        throw new BadRequestException('Role does not exist');
+      }
+
+      const isUnitExist = await this.unitService.findOne(registerDTO.strUnitId);
+      if (!isUnitExist) {
+        throw new BadRequestException('Unit does not exist');
       }
 
       const hashedPassword = await hashPassword(registerDTO.strPassword);
 
-      const user = await this.userService.createUser({
-        strName: registerDTO.strName,
-        strEmail: registerDTO.strEmail,
-        strUserImage: registerDTO.strUserImage,
+      const user: User = await this.userService.createUser({
+        ...registerDTO,
         strPassword: hashedPassword,
-        strDeviceToken: registerDTO.strDeviceToken,
-        strEnroll: registerDTO.strEnroll,
-        strMobileNumber: registerDTO.strMobileNumber,
-        strRoleId: registerDTO.strRoleId,
-        strUnitId: registerDTO.strUnitId,
-        strCredential: registerDTO.strCredential,
-        strSession: registerDTO.strSession,
       });
 
       if (!user) {

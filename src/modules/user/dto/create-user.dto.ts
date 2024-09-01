@@ -28,10 +28,6 @@ export class CreateUserDto {
 
   @IsOptional()
   @IsString()
-  strCredential?: string; // Optional credential field.
-
-  @IsOptional()
-  @IsString()
   strDeviceToken?: string; // Optional device token field.
 
   @IsOptional()
@@ -45,9 +41,4 @@ export class CreateUserDto {
 
   @IsString()
   strRoleId: string; // Role
-
-  @IsOptional()
-  @IsString()
-  @Length(1, 50)
-  strSession?: string; // Optional session field with a maximum length of 50 characters.
 }

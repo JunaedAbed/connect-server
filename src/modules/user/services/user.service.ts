@@ -39,14 +39,6 @@ export class UserService implements IUserService {
   }
 
   async createUser(userDto: CreateUserDto): Promise<User> {
-    // if (!userDto.strEmail || !userDto.strPassword) {
-    //   throw new BadRequestException('Email and password are required');
-    // } else if (await this.findByEmail(userDto.strEmail)) {
-    //   throw new BadRequestException(
-    //     'Email already exists. Please use another email',
-    //   );
-    // }
-
     try {
       const userInfo = await this.userModel.create(userDto);
 

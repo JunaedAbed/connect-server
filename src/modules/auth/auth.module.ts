@@ -10,6 +10,7 @@ import { LoginInfo, LoginInfoSchema } from './entities/auth.entity';
 import { JwtStrategy } from './jwt.strategy';
 import { AuthService } from './services/auth.service';
 import { User, UserSchema } from '../user/entities/user.entity';
+import { UnitModule } from '../unit/unit.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { User, UserSchema } from '../user/entities/user.entity';
     }),
     UserModule,
     RoleModule,
+    UnitModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
