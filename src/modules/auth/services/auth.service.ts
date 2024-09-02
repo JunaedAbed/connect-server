@@ -7,7 +7,6 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { compare } from 'bcrypt';
 import { Model } from 'mongoose';
@@ -20,6 +19,8 @@ import { hashPassword } from 'src/utils/bcrypt';
 import { AuthDTO } from '../dto/auth.dto';
 import { LoginInfo } from '../entities/auth.entity';
 import { IAuthService } from './auth-service.interface';
+import { Authenticators } from './authenticators';
+import { Role } from 'src/modules/role/entities/role.entity';
 
 @Injectable()
 export class AuthService implements IAuthService {
@@ -29,90 +30,8 @@ export class AuthService implements IAuthService {
     @Inject('IUserService') private userService: IUserService,
     @Inject('IRoleService') private roleService: IRoleService,
     @Inject('IUnitService') private unitService: IUnitService,
-    private readonly jwtService: JwtService,
+    private readonly authenticator: Authenticators,
   ) {}
-
-  public async generateAccessToken(
-    existingUser: any,
-  ): Promise<{ accessToken: string; expiresIn: Date }> {
-    const oldRefToken = existingUser.strRefreshToken;
-    if (!oldRefToken) {
-      throw new NotFoundException(
-        'Refresh token not found to generate Access token',
-      );
-    }
-    try {
-      const decodedRefToken: any = this.jwtService.decode(oldRefToken);
-      if (!decodedRefToken) {
-        throw new BadRequestException('Invalid refresh token');
-      }
-
-      const { email, intId, password } = decodedRefToken;
-      const payload = {
-        email: email,
-        intId: intId,
-        password: password,
-        roleId: existingUser.strRoleId,
-      };
-
-      const expiresIn = new Date();
-      expiresIn.setHours(expiresIn.getHours() + 10); // Expire in 8 hour
-
-      const accessToken = await this.jwtService.signAsync(payload, {
-        expiresIn: '10h',
-      });
-
-      await this.loginInfoModel.findByIdAndUpdate(existingUser.intId, {
-        strAccess_token: accessToken,
-        dteLastLogin: new Date(),
-      });
-      return { accessToken, expiresIn };
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  public async generateRefreshToken(
-    existingUser: any,
-  ): Promise<{ refreshToken: string; expiresIn: Date }> {
-    const oldRefToken = existingUser.strRefresh_token;
-    if (!oldRefToken) {
-      throw new NotFoundException(
-        'Refresh token not found in the existing user.',
-      );
-    }
-    try {
-      const decodedRefToken: any = this.jwtService.decode(oldRefToken);
-      if (!decodedRefToken) {
-        throw new BadRequestException(
-          'Invalid refresh token in the decoded token.',
-        );
-      }
-
-      const { email, id, password } = decodedRefToken;
-      const payload = {
-        email: email,
-        intId: id,
-        password: password,
-        roleId: existingUser.intRoleId,
-      };
-
-      const expiresIn = new Date();
-      expiresIn.setDate(expiresIn.getDate() + 30); // Expire in 30 days
-
-      const refreshToken = await this.jwtService.signAsync(payload, {
-        expiresIn: '30d',
-      });
-
-      await this.loginInfoModel.findByIdAndUpdate(existingUser.id, {
-        strRefreshToken: refreshToken,
-      });
-
-      return { refreshToken, expiresIn };
-    } catch (error) {
-      throw error;
-    }
-  }
 
   async login(authDTO: AuthDTO) {
     try {
@@ -133,52 +52,19 @@ export class AuthService implements IAuthService {
       if (!passwordMatched) {
         throw new UnauthorizedException('Wrong password');
       }
-      // const existingUser = await this.loginInfoModel.findOne({
-      //   where: isEmailLogin
-      //     ? { strEmail: strEmailOrPhone }
-      //     : { strPhone: strEmailOrPhone },
-      // });
-      // if (!existingUser) {
-      //   throw new NotFoundException('User data not found');
-      // }
-      const role = await this.roleService.findById(user.strRoleId);
 
-      const userAdditionalInfo = await this.loginInfoModel.aggregate([
-        {
-          $match: {
-            strEmail: user.strEmail, // Adjust the matching field as needed
-          },
-        },
-        {
-          $lookup: {
-            from: 'tblUser', // The MongoDB collection name for users
-            localField: 'strEmail', // Field from LoginInfo
-            foreignField: 'strEmail', // Field from User
-            as: 'user',
-          },
-        },
-        {
-          $unwind: '$user', // Unwind the user array to a single document
-        },
-        {
-          $project: {
-            intId: '$user._id', // The user's MongoDB ObjectId
-            strName: '$user.strName',
-            strMobileNumber: '$user.strMobileNumber',
-            strRoleId: '$user.strRoleId',
-            // Add any other fields you need from the User schema
-          },
-        },
-      ]);
-
-      const result = userAdditionalInfo[0];
+      const role: Role = await this.roleService.findById(user.strRoleId);
 
       const userToken = {
         ...user,
         strRoleId: user.strRoleId,
       };
-      const accessToken = await this.generateAccessToken(userToken);
-      const refreshToken = await this.generateRefreshToken(userToken);
+
+      const accessToken =
+        await this.authenticator.generateAccessToken(userToken);
+      const refreshToken =
+        await this.authenticator.generateRefreshToken(userToken);
+
       return {
         strAccessToken: accessToken.accessToken,
         accessTokenExpiresIn: accessToken.expiresIn,
@@ -192,79 +78,6 @@ export class AuthService implements IAuthService {
       throw error;
     }
   }
-
-  // async registration(registerDTO: UserRegistrationDTO) {
-  //   if (
-  //     !registerDTO.strEmail ||
-  //     !registerDTO.strPassword ||
-  //     !registerDTO.strMobileNumber
-  //   ) {
-  //     throw new UnauthorizedException('Invalid credentials!');
-  //   }
-  //   try {
-  //     const loginInfo = await this.loginInfoModel.findOne({
-  //       where: { strPhone: registerDTO.strMobileNumber },
-  //     });
-  //     if (!loginInfo) throw new BadRequestException('OTP is not recognized');
-
-  //     const isUserEmailExist = await this.userService.findByEmail(
-  //       registerDTO.strEmail,
-  //     );
-  //     if (isUserEmailExist) {
-  //       throw new UnauthorizedException('user already exist with this email!');
-  //     }
-  //     const isUserPhoneExist = await this.userService.findByPhone(
-  //       registerDTO.strMobileNumber,
-  //     );
-  //     if (isUserPhoneExist) {
-  //       throw new UnauthorizedException(
-  //         'user already exist with this phone number!',
-  //       );
-  //     }
-
-  //     const hashedPassword = await hashPassword(registerDTO.strPassword);
-  //     const user = await this.userService.createUser({
-  //       strName: registerDTO.strName,
-  //       strEmail: registerDTO.strEmail,
-  //       strPassword: hashedPassword,
-  //       strMobileNumber: registerDTO.strMobileNumber,
-  //       strUserImage: registerDTO.strUserImage,
-  //       strDeviceToken: registerDTO.strDeviceToken,
-  //       intRoleId: registerDTO.intRoleId,
-  //     });
-  //     if (!user) {
-  //       throw new InternalServerErrorException('Could not create user');
-  //     }
-
-  //     const role = await this.roleService.findById(user.intRoleId);
-  //     const payload = {
-  //       email: user.strEmail,
-  //       intId: user.id,
-  //       password: user.strPassword,
-  //       role: role.strRoleName,
-  //     };
-
-  //     const expiresIn = '30d';
-  //     const strRefresh_token = await this.jwtService.signAsync(payload, {
-  //       expiresIn,
-  //     });
-
-  //     const newUser = await this.loginInfoModel.findByIdAndUpdate(user.id, {
-  //       _id: user.id,
-  //       strEmail: user.strEmail,
-  //       strPassword: user.strPassword,
-  //       dteLastLogin: new Date(),
-  //       strRefresh_token: strRefresh_token,
-  //     });
-  //     if (!newUser) {
-  //       throw new InternalServerErrorException('Could not create user');
-  //     }
-
-  //     return user;
-  //   } catch (error) {
-  //     throw error;
-  //   }
-  // }
 
   async userRegistration(registerDTO: CreateUserDto): Promise<User> {
     if (
