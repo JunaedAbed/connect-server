@@ -10,6 +10,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { compare } from 'bcrypt';
 import { Model } from 'mongoose';
+import { Role } from 'src/modules/role/entities/role.entity';
 import { IRoleService } from 'src/modules/role/services/role-service.interface';
 import { IUnitService } from 'src/modules/unit/services/unit-service.interface';
 import { CreateUserDto } from 'src/modules/user/dto/create-user.dto';
@@ -20,7 +21,7 @@ import { AuthDTO } from '../dto/auth.dto';
 import { LoginInfo } from '../entities/auth.entity';
 import { IAuthService } from './auth-service.interface';
 import { Authenticators } from './authenticators';
-import { Role } from 'src/modules/role/entities/role.entity';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService implements IAuthService {
@@ -31,15 +32,14 @@ export class AuthService implements IAuthService {
     @Inject('IRoleService') private roleService: IRoleService,
     @Inject('IUnitService') private unitService: IUnitService,
     private readonly authenticator: Authenticators,
+    private readonly jwtService: JwtService,
   ) {}
 
   async login(authDTO: AuthDTO) {
     try {
       const { strEmailOrPhone, strPassword } = authDTO;
       let user: User;
-      let isEmailLogin = false;
       if (strEmailOrPhone.includes('@')) {
-        isEmailLogin = true;
         user = await this.userService.findByEmail(strEmailOrPhone);
       } else {
         user = await this.userService.findByPhone(strEmailOrPhone);
@@ -55,15 +55,29 @@ export class AuthService implements IAuthService {
 
       const role: Role = await this.roleService.findById(user.strRoleId);
 
-      const userToken = {
-        ...user,
-        strRoleId: user.strRoleId,
-      };
+      await this.loginInfoModel.deleteMany({ strEmail: user.strEmail });
 
-      const accessToken =
-        await this.authenticator.generateAccessToken(userToken);
-      const refreshToken =
-        await this.authenticator.generateRefreshToken(userToken);
+      const refreshToken = await this.authenticator.generateRefreshToken(user);
+      const accessToken = await this.authenticator.generateAccessToken(user);
+
+      const result = await this.loginInfoModel.create({
+        strEmail: user.strEmail,
+        strMobileNumber: user.strMobileNumber,
+        strPassword: user.strPassword,
+        strAccessToken: accessToken.accessToken,
+        dteAccessTokenExpire: accessToken.expiresIn,
+        strRefreshToken: refreshToken.refreshToken,
+        dteRefreshTokenExpire: refreshToken.expiresIn,
+        dteCreatedAt: new Date(),
+        dteUpdatedAt: new Date(),
+        dteLastLogin: new Date(),
+      });
+
+      if (!result) {
+        throw new InternalServerErrorException(
+          'Could not create user login info',
+        );
+      }
 
       return {
         strAccessToken: accessToken.accessToken,
@@ -73,6 +87,7 @@ export class AuthService implements IAuthService {
         strRole: role.strRoleName,
         strName: user.strName,
         strEmail: user.strEmail,
+        strEnroll: user.strEnroll,
       };
     } catch (error) {
       throw error;
@@ -131,6 +146,22 @@ export class AuthService implements IAuthService {
       return user;
     } catch (error) {
       throw error;
+    }
+  }
+
+  async logout(accessToken: string): Promise<void> {
+    try {
+      await this.jwtService.verify(accessToken);
+
+      const result = await this.loginInfoModel.deleteMany({
+        strAccessToken: accessToken,
+      });
+
+      if (result.deletedCount === 0) {
+        throw new UnauthorizedException('Invalid token or user not logged in.');
+      }
+    } catch (error) {
+      throw new UnauthorizedException('Invalid token.');
     }
   }
 }

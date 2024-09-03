@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Post, Req, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { success } from 'src/helpers/http';
 import { SUCCESS } from 'src/shared/constants/httpCodes';
@@ -37,5 +37,13 @@ export class AuthController {
     } catch (error) {
       throw error;
     }
+  }
+
+  @Delete('logout')
+  async logout(@Req() request: Request, @Res() response: Response) {
+    const token = request.headers['authorization'].split(' ')[1];
+    const data = await this.authService.logout(token);
+    // return { message: 'Logged out successfully' };
+    return response.status(SUCCESS).json(success(data));
   }
 }

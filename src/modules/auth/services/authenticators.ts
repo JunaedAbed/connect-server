@@ -15,39 +15,46 @@ export class Authenticators {
     existingUser: any,
   ): Promise<{ accessToken: string; expiresIn: Date }> {
     const oldRefToken = existingUser.strRefreshToken;
-    // if (!oldRefToken) {
-    //   throw new NotFoundException(
-    //     'Refresh token not found to generate Access token',
-    //   );
-    // }
-    try {
-      const decodedRefToken: any = this.jwtService.decode(oldRefToken);
-      if (!decodedRefToken) {
-        throw new BadRequestException('Invalid refresh token');
-      }
 
-      const { email, intId, password } = decodedRefToken;
+    try {
+      // Decode the refresh token
+      //   const decodedRefToken: any = this.jwtService.decode(oldRefToken);
+
+      //   if (!decodedRefToken) {
+      //     throw new BadRequestException('Invalid refresh token');
+      //   }
+
+      // Extract necessary fields from the decoded refresh token
+      //   const { email, intId, password, strEnroll } = decodedRefToken;
+
+      // Create a payload for the JWT
       const payload = {
-        email: email,
-        intId: intId,
-        password: password,
+        email: existingUser.strEmail,
+        intId: existingUser._id,
+        enroll: existingUser.strEnroll,
+        password: existingUser.strPassword,
         roleId: existingUser.strRoleId,
       };
 
+      // Set expiration date for 10 hours from now
       const expiresIn = new Date();
-      expiresIn.setHours(expiresIn.getHours() + 10); // Expire in 8 hour
+      expiresIn.setHours(expiresIn.getHours() + 10);
 
+      // Generate the access token with 10 hours expiration
       const accessToken = await this.jwtService.signAsync(payload, {
         expiresIn: '10h',
       });
 
-      await this.loginInfoModel.findByIdAndUpdate(existingUser.intId, {
+      // Update the user's access token and last login date in the database
+      await this.loginInfoModel.findByIdAndUpdate(existingUser._id, {
         strAccess_token: accessToken,
         dteLastLogin: new Date(),
       });
+
+      // Return the access token and its expiration date
       return { accessToken, expiresIn };
     } catch (error) {
-      throw error;
+      throw new Error(`Failed to generate access token: ${error.message}`);
     }
   }
 
@@ -55,13 +62,14 @@ export class Authenticators {
     existingUser: any,
   ): Promise<{ refreshToken: string; expiresIn: Date }> {
     try {
-      const { strEmail, _id, strPassword, strRoleId } = existingUser;
+      //   const { strEmail, _id, strPassword, strRoleId, strEnroll } = existingUser;
 
       const payload = {
-        email: strEmail,
-        intId: _id,
-        password: strPassword,
-        roleId: strRoleId,
+        email: existingUser.strEmail,
+        intId: existingUser._id,
+        enroll: existingUser.strEnroll,
+        password: existingUser.strPassword,
+        roleId: existingUser.strRoleId,
       };
 
       const expiresIn = new Date();
@@ -71,7 +79,7 @@ export class Authenticators {
         expiresIn: '30d',
       });
 
-      await this.loginInfoModel.findByIdAndUpdate(_id, {
+      await this.loginInfoModel.findByIdAndUpdate(existingUser._id, {
         strRefreshToken: refreshToken,
         dteUpdatedAt: new Date(),
       });

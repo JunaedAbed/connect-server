@@ -20,8 +20,14 @@ export class LoginInfo {
   @Prop({ type: String, required: false, maxlength: 512 })
   strAccessToken: string;
 
+  @Prop({ type: Date, default: Date.now, required: false })
+  dteAccessTokenExpire: Date;
+
   @Prop({ type: String, required: false, maxlength: 512 })
   strRefreshToken: string;
+
+  @Prop({ type: Date, default: Date.now, required: false })
+  dteRefreshTokenExpire: Date;
 
   @Prop({ type: Date, default: Date.now, required: false })
   dteCreatedAt: Date;
