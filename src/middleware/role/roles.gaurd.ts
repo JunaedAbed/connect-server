@@ -9,12 +9,14 @@ import {
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { IS_PUBLIC_KEY } from 'src/decorators/public.decorator';
+import { IAuthService } from 'src/modules/auth/services/auth-service.interface';
 import { IRoleService } from 'src/modules/role/services/role-service.interface';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(
-    @Inject('IRoleService') private roleService: IRoleService,
+    @Inject('IRoleService') private readonly roleService: IRoleService,
+    @Inject('IAuthService') private readonly authService: IAuthService,
     private reflector: Reflector,
     private jwtService: JwtService,
   ) {}
@@ -57,6 +59,14 @@ export class RolesGuard implements CanActivate {
     const currentTime = Math.floor(Date.now() / 1000);
     if (decodedToken.exp < currentTime) {
       throw new UnauthorizedException('Unauthorized: Token expired');
+    }
+
+    // Here you should check if the token is still valid and not logged out
+    const isTokenValid = await this.authService.isTokenValid(token); // Implement this method
+    if (!isTokenValid) {
+      throw new UnauthorizedException(
+        'Unauthorized: Token has been invalidated',
+      );
     }
 
     // If no roles are specified, allow any authenticated user

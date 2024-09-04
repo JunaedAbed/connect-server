@@ -35,7 +35,17 @@ export class AuthService implements IAuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async login(authDTO: AuthDTO) {
+  async isTokenValid(token: string): Promise<boolean> {
+    const loginInfo = await this.loginInfoModel.findOne({
+      strAccessToken: token,
+    });
+    if (!loginInfo) {
+      return false;
+    }
+    return true;
+  }
+
+  async login(authDTO: AuthDTO): Promise<any> {
     try {
       const { strEmailOrPhone, strPassword } = authDTO;
       let user: User;
@@ -147,6 +157,37 @@ export class AuthService implements IAuthService {
     } catch (error) {
       throw error;
     }
+  }
+
+  async validateRefreshToken(refreshToken: string): Promise<any> {
+    try {
+      const decodedToken = this.jwtService.verify(refreshToken);
+      if (decodedToken) {
+        const existingUser = await this.loginInfoModel.findOne({
+          strEmail: decodedToken.email,
+        });
+
+        if (!existingUser) {
+          throw new NotFoundException('User not found in the database');
+        }
+
+        const newAccessToken =
+          await this.authenticator.generateAccessToken(existingUser);
+        const refreshTokenExpiresIn = decodedToken.exp
+          ? new Date(decodedToken.exp * 1000)
+          : null;
+
+        return {
+          accessToken: newAccessToken.accessToken,
+          accessTokenExpiresIn: newAccessToken.expiresIn,
+          refreshToken: refreshToken,
+          refreshTokenExpiresIn: refreshTokenExpiresIn,
+        };
+      }
+    } catch (error) {
+      throw error;
+    }
+    return null;
   }
 
   async logout(accessToken: string): Promise<void> {

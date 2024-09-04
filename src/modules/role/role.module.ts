@@ -18,6 +18,7 @@ import { RoleService } from './services/role.service';
     },
     JwtService,
   ],
+
   exports: ['IRoleService'],
 })
 export class RoleModule {}

@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PassportModule } from '@nestjs/passport';
@@ -28,7 +27,14 @@ import { Authenticators } from './services/authenticators';
     UnitModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, Authenticators],
-  exports: [AuthService, PassportModule, JwtModule],
+  providers: [
+    {
+      provide: 'IAuthService',
+      useClass: AuthService,
+    },
+    JwtStrategy,
+    Authenticators,
+  ],
+  exports: ['IAuthService', PassportModule, JwtModule],
 })
 export class AuthModule {}

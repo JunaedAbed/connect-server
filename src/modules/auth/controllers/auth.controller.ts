@@ -1,14 +1,25 @@
-import { Body, Controller, Delete, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Inject,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { Response } from 'express';
-import { success } from 'src/helpers/http';
+import { notFound, success } from 'src/helpers/http';
+import { CreateUserDto } from 'src/modules/user/dto/create-user.dto';
 import { SUCCESS } from 'src/shared/constants/httpCodes';
 import { AuthDTO } from '../dto/auth.dto';
-import { AuthService } from '../services/auth.service';
-import { CreateUserDto } from 'src/modules/user/dto/create-user.dto';
+import { IAuthService } from '../services/auth-service.interface';
+import { AuthToken } from 'src/decorators/authToken.decorator';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    @Inject('IAuthService') private readonly authService: IAuthService,
+  ) {}
 
   @Post('register')
   async userRegister(
@@ -39,9 +50,30 @@ export class AuthController {
     }
   }
 
+  @Post('refresh')
+  async refreshToken(
+    @Req() request: Request,
+    @Res() response: Response,
+    @Body('refresh') refresh: any,
+  ) {
+    try {
+      const data = await this.authService.validateRefreshToken(refresh);
+      if (!data) {
+        return response.status(404).json(notFound('error'));
+      }
+      return response.status(SUCCESS).json(success(data));
+    } catch (error) {
+      throw error;
+    }
+  }
+
   @Delete('logout')
-  async logout(@Req() request: Request, @Res() response: Response) {
-    const token = request.headers['authorization'].split(' ')[1];
+  async logout(
+    @AuthToken() token: string,
+    @Req() request: Request,
+    @Res() response: Response,
+  ) {
+    // const token = request.headers['authorization'].split(' ')[1];
     await this.authService.logout(token);
     return response
       .status(SUCCESS)

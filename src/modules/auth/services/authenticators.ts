@@ -20,7 +20,6 @@ export class Authenticators {
         email: existingUser.strEmail,
         intId: existingUser._id,
         enroll: existingUser.strEnroll,
-        password: existingUser.strPassword,
         roleId: existingUser.strRoleId,
       };
 
@@ -50,7 +49,6 @@ export class Authenticators {
         email: existingUser.strEmail,
         intId: existingUser._id,
         enroll: existingUser.strEnroll,
-        password: existingUser.strPassword,
         roleId: existingUser.strRoleId,
       };
 
