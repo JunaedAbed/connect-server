@@ -28,8 +28,6 @@ export class RoleController {
   ) {}
 
   @Get()
-  // @UseGuards(RolesGuard)
-  // @Roles('super-admin', 'admin')
   async findAll(@Res() response: Response) {
     const data: any = await this.roleService.findAll();
     return response.status(SUCCESS).json(success(data));

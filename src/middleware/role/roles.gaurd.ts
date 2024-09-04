@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import { IS_PUBLIC_KEY } from 'src/decorators/public.decorator';
 import { IRoleService } from 'src/modules/role/services/role-service.interface';
 
 @Injectable()
@@ -19,6 +20,15 @@ export class RolesGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const isPublic = this.reflector.get<boolean>(
+      IS_PUBLIC_KEY,
+      context.getHandler(),
+    );
+
+    if (isPublic) {
+      return true;
+    }
+
     const roles =
       this.reflector.get<string[]>('roles', context.getHandler()) ||
       this.reflector.get<string[]>('roles', context.getClass());
