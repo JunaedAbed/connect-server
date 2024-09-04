@@ -42,8 +42,9 @@ export class AuthController {
   @Delete('logout')
   async logout(@Req() request: Request, @Res() response: Response) {
     const token = request.headers['authorization'].split(' ')[1];
-    const data = await this.authService.logout(token);
-    // return { message: 'Logged out successfully' };
-    return response.status(SUCCESS).json(success(data));
+    await this.authService.logout(token);
+    return response
+      .status(SUCCESS)
+      .json(success({ message: 'Logged out successfully' }));
   }
 }
