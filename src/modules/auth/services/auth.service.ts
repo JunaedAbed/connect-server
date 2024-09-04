@@ -7,6 +7,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { compare } from 'bcrypt';
 import { Model } from 'mongoose';
@@ -21,7 +22,6 @@ import { AuthDTO } from '../dto/auth.dto';
 import { LoginInfo } from '../entities/auth.entity';
 import { IAuthService } from './auth-service.interface';
 import { Authenticators } from './authenticators';
-import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService implements IAuthService {

@@ -2,26 +2,27 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
-import { RoleService } from 'src/modules/role/services/role.service';
+import { IRoleService } from 'src/modules/role/services/role-service.interface';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(
+    @Inject('IRoleService') private roleService: IRoleService,
     private reflector: Reflector,
     private jwtService: JwtService,
-    private readonly roleService: RoleService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const roles = this.reflector.get<string[]>('roles', context.getHandler());
-    if (!roles) {
-      return true;
-    }
+    const roles =
+      this.reflector.get<string[]>('roles', context.getHandler()) ||
+      this.reflector.get<string[]>('roles', context.getClass());
+
     const request = context.switchToHttp().getRequest();
     const authToken = request.headers['authorization'];
 
@@ -37,7 +38,8 @@ export class RolesGuard implements CanActivate {
     }
 
     const token = tokenParts[1];
-    const decodedToken = this.jwtService.decode(token);
+    const decodedToken = this.jwtService.decode(token) as any;
+
     if (!decodedToken || !decodedToken.exp) {
       throw new UnauthorizedException('Unauthorized: Invalid token');
     }
@@ -45,6 +47,11 @@ export class RolesGuard implements CanActivate {
     const currentTime = Math.floor(Date.now() / 1000);
     if (decodedToken.exp < currentTime) {
       throw new UnauthorizedException('Unauthorized: Token expired');
+    }
+
+    // If no roles are specified, allow any authenticated user
+    if (!roles || roles.length === 0) {
+      return true;
     }
 
     const roleInfo = await this.roleService.findById(decodedToken.roleId);

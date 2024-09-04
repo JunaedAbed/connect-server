@@ -9,13 +9,18 @@ import {
   Post,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { success } from 'src/helpers/http';
+import { Roles } from 'src/middleware/role/roles.decorator';
+import { RolesGuard } from 'src/middleware/role/roles.gaurd';
 import { SUCCESS } from 'src/shared/constants/httpCodes';
 import { CreateRoleDto } from '../dto/create-role.dto';
 import { IRoleService } from '../services/role-service.interface';
 
+@UseGuards(RolesGuard)
+@Roles('super-admin')
 @Controller('role')
 export class RoleController {
   constructor(
@@ -24,7 +29,7 @@ export class RoleController {
 
   @Get()
   // @UseGuards(RolesGuard)
-  // @Roles('super-admin')
+  // @Roles('super-admin', 'admin')
   async findAll(@Res() response: Response) {
     const data: any = await this.roleService.findAll();
     return response.status(SUCCESS).json(success(data));

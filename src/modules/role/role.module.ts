@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RoleController } from './controllers/role.controller';
 import { Role, RoleSchema } from './entities/role.entity';
@@ -15,6 +16,7 @@ import { RoleService } from './services/role.service';
       provide: 'IRoleService',
       useClass: RoleService,
     },
+    JwtService,
   ],
   exports: ['IRoleService'],
 })
